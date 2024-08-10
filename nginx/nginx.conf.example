@@ -45,23 +45,29 @@ server {
 
     # 媒体
     location /favicon.ico {
-        root /var/www/html/storage/public/;
-        try_files /media/favicon.png /media/favicon.ico =404;
+        root /var/www/html/backend/static/;
+        try_files favicon.png favicon.ico =404;
     }
     location ^~ /media/ {
         root /var/www/html/storage/public/;
     }
 
     # 后端
+    # common static
+    location ~* ^/static/(.*)$ {
+        root /var/www/html/backend/static/;
+        # add_header x-remark "common assets";
+        try_files /$1 =404;
+    }
     # common assets
     location ~* ^/base/static/(.*)$ {
         root /var/www/html/backend/base/static/;
-        add_header x-remark "base assets";
+        # add_header x-remark "base assets";
         try_files /$1 =404;
     }
     location ~* ^/([\w\-_/]+)/static/(.*)$ {
         root /var/www/html/backend/apps/$1/static/;
-        add_header x-remark "apps assets";
+        # add_header x-remark "apps assets";
         try_files /$2 =404;
     }
     # location ^~ /api/ {
