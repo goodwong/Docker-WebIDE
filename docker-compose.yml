@@ -10,7 +10,7 @@ services:
     volumes:
       - ../:/app
       - app-data:/home/debian
-      - $MOUNT_DIR:/data/
+      - $MOUNT_DIR:/mnt/
     working_dir: /app/backend/
 
     ports:
@@ -57,7 +57,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./adminer/plugins-enabled/:/var/www/html/plugins-enabled/
-      - ../storage/:/app/storage/
+      - ../databases/:/app/databases/
     #ports:
     #  - $ADMINER_HTTP_PORT:8080
     environment: 
