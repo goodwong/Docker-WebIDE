@@ -4,9 +4,11 @@ ARG USERNAME=debian
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 USER root
-
 # Avoid warnings by switching to noninteractive
 ENV DEBIAN_FRONTEND=noninteractive
+
+ENV NVM_DIR=/usr/local/nvm
+ENV NODE_VERSION=22.11.0
 RUN apt-get update \
     #
     # 安装 开发工具
@@ -20,10 +22,22 @@ RUN apt-get update \
     # reportlab 的依赖
     && apt-get install -y pkg-config libcairo2-dev \
     #
+    # 创建用户
+    # Create a non-root user to use if preferred - see https://aka.ms/vscode-remote/containers/non-root-user.
+    && groupadd --gid $USER_GID $USERNAME \
+    && useradd -s /bin/bash --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    # [Optional] Add sudo support for the non-root user
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME \
+    #
     # 安装 node 环境
+    && mkdir -p $NVM_DIR \
     && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash \
-    && . ~/.nvm/nvm.sh && nvm install 21 \
+    && . $NVM_DIR/nvm.sh && nvm install $NODE_VERSION \
+    && nvm alias default $NODE_VERSION \
+    && nvm use default \
     && npm install -g pnpm \
+    && echo ". $NVM_DIR/nvm.sh" >> /home/$USERNAME/.bashrc \
     #
     # Python 3.12（源码）
     && apt install -y libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev wget build-essential libreadline-dev \
@@ -44,15 +58,6 @@ RUN apt-get update \
     && apt-get autoremove -y \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
-
-
-    # Create a non-root user to use if preferred - see https://aka.ms/vscode-remote/containers/non-root-user.
-RUN groupadd --gid $USER_GID $USERNAME \
-    && useradd -s /bin/bash --uid $USER_UID --gid $USER_GID -m $USERNAME \
-    #
-    # [Optional] Add sudo support for the non-root user
-    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME\
-    && chmod 0440 /etc/sudoers.d/$USERNAME
 
 # Switch back to dialog for any ad-hoc use of apt-get
 ENV DEBIAN_FRONTEND=
