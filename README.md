@@ -113,14 +113,14 @@ root@dev-debian11:/app# tree -L 2 -ad
 
     ```bash
     cd .docker/
-    docker-compose up -d
+    docker compose up -d
     ```
 
     > 如果在国内，构建镜像可能需要使用代理：
     > *注意*
     > apt 不支持 socks5的代理，最好准备 http代理（可以用privoxy转换）
     > ```bash
-    > docker-compose build \
+    > docker compose build \
     >   --build-arg='http_proxy=http://192.168.1.199:10080' \
     >   --build-arg='https_proxy=http://192.168.1.199:10080' \
     >   app
@@ -131,7 +131,7 @@ root@dev-debian11:/app# tree -L 2 -ad
         * 方式一，通过容器：
             ```bash
             cd .docker/
-            docker-compose exec app bash
+            docker compose exec app bash
             cd /app/backend/
             ```
         * 方式二，通过coder-server的Terminal
@@ -178,7 +178,7 @@ root@dev-debian11:/app# tree -L 2 -ad
 
     - 备份数据库
         ```bash
-        docker-compose exec db bash
+        docker compose exec db bash
         mysqldump --single-transaction --quick --triggers --routines --events -p app | gzip > /var/lib/mysql/app--$(date '+%Y%m%d-%H%M%S').sql.gz
         ```
 
@@ -256,7 +256,7 @@ root@dev-debian11:/app# tree -L 2 -ad
 
 8. 清理环境
     ```bash
-    docker-compose down
+    docker compose down
     docker volume rm example-dev_app-data  example-dev_db-data # 前缀由.env里的COMPOSE_PROJECT_NAME变量决定
     ```
 
@@ -345,7 +345,7 @@ root@dev-debian11:/app# tree -L 2 -ad
 
 * docker-compose.override.yml
     > 用于开发场景
-    > `docker-compose up -d`
+    > `docker compose up -d`
     > 没有指定`-f`参数的情况下，会自动使用 `docker-compose.yml` 和 `docker-compose.override.yml`
     - app 容器
         1. 增加 sudo
@@ -359,7 +359,7 @@ root@dev-debian11:/app# tree -L 2 -ad
 
 * docker-compose.prod.yml
     > 用于生产场景
-    > `docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
+    > `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
     - app 容器
         6. 使用uvicorn部署
         7. restart: always
