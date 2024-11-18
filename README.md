@@ -38,19 +38,36 @@ root@dev-debian11:/app# tree -L 2 -ad
 │   ├── …………
 │   ├── src
 │   └── types
-└── frontend # <----------------- 前端项目
+├── frontend # <----------------- 前端项目
 │   ├── .git
 │   ├── …………
 │   └── src
-├── databases # <---------------- 数据库
-│   ├── …………
-│   └── orders/orders.sqlite3
-└── storage # <------------------ 文件存储
-    ├── …………
-    └── orders/1-raw/xxxx/xxxx.json.gz
+└── databases # <---------------- 数据库（新增！）
+    └── ...
 ```
 
+**数据库、文件分离**
+> 2024-10：由于文件系统太大，将文件通过NFS存放在另一台机器。
+> 由于两方面原因，数据库需要放在本地文件系统：
+> 1. 通过SQLite文档得知，SQLite通过网络共享方式并发写数据库很可能出现文件损坏。
+    - [SQLite 建议不要在 NFS 上共享它以进行多次访问，因为锁定... ](https://news.ycombinator.com/item?id=23510286)
+    > 如果数据库文件保存在 NFS 文件系统上，则此锁定机制可能无法正常工作。这是因为 fcntl() 文件锁定在许多 NFS 实现上被破坏。如果多个进程可能尝试同时访问该文件，则应避免将 SQLite 数据库文件放在 NFS 上。
+> 2. 文件系统从数据校验的角度考虑，使用了Btrfs文件系统，这类CoW类型的系统存在严重的写放大和文件碎片，不适合存放频繁更新的数据库文件。
 
+
+**小文件存储**
+根据网络资料和知识知道，大量小文件会导致：
+1. 过于消耗inode，可能磁盘还有空间，但是inode已经消耗完了
+2. 消耗存储空间，文件系统按照4K为最小单位，但是很多不足4K的文件例如200b的文件也占用4K空间，导致存储效率严重下降
+3. 为了避免文件夹下面太多文件，一半会使用多层文件夹进行分层存储，每个文件夹也需要占用4K空间
+4. 统计文件夹空间占用耗时很久，例如1000W个文件可能需要20分钟才能统计完空间占用。
+
+后续考虑使用SQLite或zip进行小文件存储：
+1. 有实验表示，小文件能减少空间占用，读写速度最多能提升35%
+> https://sqlite.org/intern-v-extern-blob.html
+> https://sqlite.org/fasterthanfs.html
+> https://levysoft.medium.com/sqlite-is-35-faster-than-filesystem-with-small-blobs-2974c095d324
+> https://www.reddit.com/r/programming/comments/6h49pn/sqlite_small_blob_storage_35_faster_than_the/
 
 
 
@@ -96,14 +113,14 @@ root@dev-debian11:/app# tree -L 2 -ad
 
     ```bash
     cd .docker/
-    docker compose up -d
+    docker-compose up -d
     ```
 
     > 如果在国内，构建镜像可能需要使用代理：
     > *注意*
     > apt 不支持 socks5的代理，最好准备 http代理（可以用privoxy转换）
     > ```bash
-    > docker compose build \
+    > docker-compose build \
     >   --build-arg='http_proxy=http://192.168.1.199:10080' \
     >   --build-arg='https_proxy=http://192.168.1.199:10080' \
     >   app
@@ -114,7 +131,7 @@ root@dev-debian11:/app# tree -L 2 -ad
         * 方式一，通过容器：
             ```bash
             cd .docker/
-            docker compose exec app bash
+            docker-compose exec app bash
             cd /app/backend/
             ```
         * 方式二，通过coder-server的Terminal
@@ -161,7 +178,7 @@ root@dev-debian11:/app# tree -L 2 -ad
 
     - 备份数据库
         ```bash
-        docker compose exec db bash
+        docker-compose exec db bash
         mysqldump --single-transaction --quick --triggers --routines --events -p app | gzip > /var/lib/mysql/app--$(date '+%Y%m%d-%H%M%S').sql.gz
         ```
 
@@ -239,7 +256,7 @@ root@dev-debian11:/app# tree -L 2 -ad
 
 8. 清理环境
     ```bash
-    docker compose down
+    docker-compose down
     docker volume rm example-dev_app-data  example-dev_db-data # 前缀由.env里的COMPOSE_PROJECT_NAME变量决定
     ```
 
@@ -326,10 +343,10 @@ root@dev-debian11:/app# tree -L 2 -ad
     - nginx 容器
         1. 代理vite
 
-* docker compose.override.yml
+* docker-compose.override.yml
     > 用于开发场景
-    > `docker compose up -d`
-    > 没有指定`-f`参数的情况下，会自动使用 `docker-compose.yml` 和 `docker compose.override.yml`
+    > `docker-compose up -d`
+    > 没有指定`-f`参数的情况下，会自动使用 `docker-compose.yml` 和 `docker-compose.override.yml`
     - app 容器
         1. 增加 sudo
         2. 增加 code-server
@@ -340,9 +357,9 @@ root@dev-debian11:/app# tree -L 2 -ad
         2. 代理 adminer
 
 
-* docker compose.prod.yml
+* docker-compose.prod.yml
     > 用于生产场景
-    > `docker compose -f docker-compose.yml -f docker compose.prod.yml up -d`
+    > `docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
     - app 容器
         6. 使用uvicorn部署
         7. restart: always
